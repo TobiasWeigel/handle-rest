@@ -21,6 +21,31 @@ import com.fasterxml.jackson.core.*;
 
 public class HandleSystemEndpointServlet extends HttpServlet {
 	
+	/**
+	 * Reference to a Handle or moer specifically, to one or more of its index values.
+	 * 
+	 * @author tobiasweigel
+	 *
+	 */
+	protected final static class HandleReference {
+		
+		protected final String handle;
+		protected final int[] indexes;
+		
+		public HandleReference(String handle, int[] indexes) {
+			this.handle = handle;
+			this.indexes = indexes;
+		}
+
+		public String getHandle() {
+			return handle;
+		}
+
+		public int[] getIndexes() {
+			return indexes;
+		}
+	}
+	
 	private final Logger logger = Logger.getLogger(this.getClass().getName());
 	private HSAdapter hsAdapter;
 
@@ -30,15 +55,19 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 				authInfo.getAdminHandle(), authInfo.getKeyIndex(),
 				authInfo.getPrivateKey(), authInfo.getCipher());
 	}
-
-	@Override
-	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-			throws ServletException, IOException {
-		String[] parts = req.getRequestURI().split("/", 3);
+	
+	/**
+	 * Analyses the given URI and returns the implied reference to a Handle and potentially also to specific Handle 
+	 * index values.
+	 * 
+	 * @param uri
+	 * @return a HandleReference object
+	 * @throws IllegalArgumentException if the URI is malformed
+	 */
+	protected static HandleReference determineHandleReference(String uri) {
+		String[] parts = uri.split("/", 3);
 		if (parts.length < 3) {
-//			resp.setStatus(400);
-			resp.sendError(400, "Bad Request: No handle given.");
-			return;
+			throw new IllegalArgumentException("Bad Request: No handle given.");
 		}
 		String handle = parts[2];
 		int[] indexes = null;
@@ -50,13 +79,26 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 				indexes[0] = Integer.parseInt(subs);
 			}
 			catch (NumberFormatException exc) {
-				resp.sendError(400, "Invalid handle index: "+subs);
-				return;
+				throw new IllegalArgumentException("Invalid handle index: "+subs);
 			}
 			handle = handle.substring(handle.indexOf(":")+1);
 		}
+		return new HandleReference(handle, indexes);
+	}
+
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+			throws ServletException, IOException {
+		HandleReference handleref;
 		try {
-			HandleValue[] allhv = hsAdapter.resolveHandle(handle, null, indexes);
+			handleref = determineHandleReference(req.getRequestURI());
+		}
+		catch (IllegalArgumentException exc) {
+			resp.sendError(400, exc.getMessage());
+			return;
+		}
+		try {
+			HandleValue[] allhv = hsAdapter.resolveHandle(handleref.getHandle(), null, handleref.getIndexes());
 			// encode all values in JSON
 			JsonFactory jsonfact = new JsonFactory();
 			JsonGenerator json = jsonfact.createJsonGenerator(resp.getWriter());
@@ -92,5 +134,6 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	public static boolean isStringType(String typeAsString) {
 		return (typeAsString.equals("URL") || typeAsString.equals("URN") || typeAsString.equals("EMAIL") || typeAsString.equals("HS_ALIAS"));
 	}
+	
 
 }
