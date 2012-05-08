@@ -2,13 +2,18 @@ package de.dkrz.infra.pid.handle.rest;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Vector;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import sun.misc.BASE64Decoder;
 
 import net.handle.api.HSAdapter;
 import net.handle.api.HSAdapterFactory;
@@ -45,26 +50,34 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			return indexes;
 		}
 	}
+
+	private static final int DEFAULT_ADMIN_VALUE_INDEX = 100;
 	
 	private final Logger logger = Logger.getLogger(this.getClass().getName());
-	private HSAdapter hsAdapter;
+	protected HSAdapter hsAdapter;
+	protected HandleAuthorizationInfo authInfo;
+	protected JsonFactory jsonFactory;
 
 	public HandleSystemEndpointServlet(HandleAuthorizationInfo authInfo)
 			throws HandleException {
 		this.hsAdapter = HSAdapterFactory.newInstance(
 				authInfo.getAdminHandle(), authInfo.getKeyIndex(),
 				authInfo.getPrivateKey(), authInfo.getCipher());
+		this.authInfo = authInfo;
+		this.jsonFactory = new JsonFactory();
 	}
 	
 	/**
 	 * Analyses the given URI and returns the implied reference to a Handle and potentially also to specific Handle 
-	 * index values.
+	 * index values, if allowed.
 	 * 
 	 * @param uri
+	 * @param allowIndexes If true, index specification may be allowed. If false and indexes are specified, the method 
+	 * will fail with an IllegalArgumentException.
 	 * @return a HandleReference object
 	 * @throws IllegalArgumentException if the URI is malformed
 	 */
-	protected static HandleReference determineHandleReference(String uri) {
+	protected static HandleReference determineHandleReference(String uri, boolean allowIndexes) {
 		String[] parts = uri.split("/", 3);
 		if (parts.length < 3) {
 			throw new IllegalArgumentException("Bad Request: No handle given.");
@@ -73,6 +86,9 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		int[] indexes = null;
 		// detect key index prefixed to Handle prefix (key:prefix/suffix)
 		if ((handle.indexOf(":") >= 0) && (handle.indexOf(":") < handle.indexOf("/"))) {
+			if (!allowIndexes) {
+				throw new IllegalArgumentException("Index specification not allowed for this operation!");
+			}
 			indexes = new int[1];
 			String subs = handle.substring(0, handle.indexOf(":"));
 			try {
@@ -84,6 +100,18 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			handle = handle.substring(handle.indexOf(":")+1);
 		}
 		return new HandleReference(handle, indexes);
+	}
+
+	/**
+	 * Analyses the given URI and returns the implied reference to a Handle and potentially also to specific Handle 
+	 * index values.
+	 * 
+	 * @param uri
+	 * @return a HandleReference object
+	 * @throws IllegalArgumentException if the URI is malformed
+	 */
+	public static HandleReference determineHandleReference(String uri) {
+		return determineHandleReference(uri, true);
 	}
 
 	@Override
@@ -100,8 +128,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		try {
 			HandleValue[] allhv = hsAdapter.resolveHandle(handleref.getHandle(), null, handleref.getIndexes());
 			// encode all values in JSON
-			JsonFactory jsonfact = new JsonFactory();
-			JsonGenerator json = jsonfact.createJsonGenerator(resp.getWriter());
+			JsonGenerator json = jsonFactory.createJsonGenerator(resp.getWriter());
 			json.writeStartObject();
 			for (HandleValue hv: allhv) {
 				json.writeObjectFieldStart(((Integer)hv.getIndex()).toString());
@@ -128,6 +155,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			pwr.flush();
 			wr.flush();
 			resp.sendError(500, "Error during Handle lookup or JSON encoding.\n\n"+wr.toString());
+			return;
 		}
 	}
 	
@@ -135,5 +163,147 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		return (typeAsString.equals("URL") || typeAsString.equals("URN") || typeAsString.equals("EMAIL") || typeAsString.equals("HS_ALIAS"));
 	}
 	
+	/**
+	 * POST request to replace all values of a handle and create a new handle if it does not exist yet.
+	 * The method will add an admin handle value at index 100 automatically, unless the given values contain such a 
+	 * value at any index.  
+	 * 
+	 * The JSON format is array-based. The handle values must be provided as an array, where each array entry is an 
+	 * object with fields "index", "type" and "data". By default, the index field must be a positive integer, the type
+	 * field must be a string. The data field defaults to a base64 encoded string, however, if the type field is any one
+	 * of URL, URN, EMAIL or HS_ALIAS, the data field is passed as it is and not base64-decoded.
+	 * 
+	 * Special care is taken of HS_ADMIN values. If there is no HS_ADMIN value specified in the JSON data and the Handle
+	 * does not exist yet, the method will automatically add a default HS_ADMIN value. If the handle did exist, the 
+	 * method will not remove any existing HS_ADMIN values to prevent the emergence of invalid Handles that do not bear
+	 * admin information. 
+	 * 
+	 * This also means that this method is not suited for updating HS_ADMIN information on existing Handles! 
+	 */
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+			throws ServletException, IOException {
+		if (!req.getContentType().equals("application/json")) {
+			resp.sendError(415, "Only application/json is allowed as request MIME type.");
+			return;
+		}
+		HandleReference handleref;
+		try {
+			handleref = determineHandleReference(req.getRequestURI(), false);
+		}
+		catch (IllegalArgumentException exc) {
+			resp.sendError(400, exc.getMessage());
+			return;
+		}
+		BASE64Decoder base64 = new BASE64Decoder();
+		try {
+			Vector<HandleValue> hvNew = new Vector<HandleValue>();
+			boolean hvNewContainsAdminValue = false;
+			/* The method will replace all current values on the handle with the given values (JSON encoded)
+			 * plus an admin handle value */
+			JsonParser json = jsonFactory.createJsonParser(req.getReader());
+			// parse JSON. Variations exist. First, find out if base entity is array or object.
+			JsonToken baseEle = json.nextToken();
+			if (baseEle.equals(JsonToken.START_ARRAY)) {
+				// array-based JSON. Iterate all elements of the array.
+				JsonToken ele = json.nextToken();
+				while (!ele.equals(JsonToken.END_ARRAY)) {
+					if (ele.equals(JsonToken.START_OBJECT)) {
+						// read fields: index, type, data
+						int index = 0;
+						String type = null;
+						String data = null;
+						JsonToken field = json.nextToken();
+						while (!field.equals(JsonToken.END_OBJECT)) {
+							if (!field.equals(JsonToken.FIELD_NAME)) throw new IllegalArgumentException("JSON format error - expected field name - at "+json.getCurrentLocation());
+							String fieldName = json.getText();
+							if (fieldName.equalsIgnoreCase("index")) {
+								json.nextToken();
+								index = json.getIntValue();
+							}
+							else if (fieldName.equalsIgnoreCase("type")) {
+								json.nextToken();
+								type = json.getText();
+							}
+							else if (fieldName.equalsIgnoreCase("data")) {
+								// decode base64 later.. for now, we save text
+								json.nextToken();
+								data = json.getText();
+							}
+							field = json.nextToken();
+						}
+						// check read values
+						if ((type == null) || (data == null)) throw new IllegalArgumentException("JSON format error - must specify all of index, type and data - near "+json.getCurrentLocation());
+						if (index < 0) throw new IllegalArgumentException("Illegal index value ("+index+") - must be positive - near "+json.getCurrentLocation());
+						// now decode base64 data if applicable
+						byte[] data_byte = null;
+						if (!isStringType(type)) {
+							data_byte = base64.decodeBuffer(data);
+						}
+						else data_byte = data.getBytes();
+						// values are ok; now assign HandleValue
+						hvNew.add(new HandleValue(index, type.getBytes(), data_byte));
+						if (type.equals("HS_ADMIN")) hvNewContainsAdminValue = true;
+					}
+					else throw new IllegalArgumentException("JSON format error - expected start of an object at "+json.getCurrentLocation());
+					ele = json.nextToken();
+				}
+			} else if (baseEle.equals(JsonToken.START_OBJECT)) {
+				// object-based JSON.
+				throw new IllegalArgumentException("Using an object as the JSON base element is not yet implemented!");
+			} else throw new IllegalArgumentException("Base JSON element must be an Array or an Object!");
+			HandleValue hvAdmin = hsAdapter.createAdminValue(authInfo.getAdminHandle(), authInfo.getKeyIndex(), DEFAULT_ADMIN_VALUE_INDEX);
+			HandleValue[] hvOrig = null;
+			// check if handle exists
+			boolean doCreate = false;
+			try {
+				hvOrig = hsAdapter.resolveHandle(handleref.getHandle(), null, null); 
+			}
+			catch (HandleException exc) {
+				doCreate = true;
+			}
+			// transform hvNew to array
+			HandleValue[] handlevalues = new HandleValue[hvNew.size()];
+			handlevalues = hvNew.toArray(handlevalues);
+			if (doCreate) {
+				// handle did not exist; create handle with new values
+				if (!hvNewContainsAdminValue) {
+					// add admin handle value if none present in new values yet
+					hvNew.add(hvAdmin);
+				}
+				hsAdapter.createHandle(handleref.getHandle(), handlevalues);
+			}
+			else {
+				// handle exists already; clear all handle values and replace with new values
+				// make sure we don't remove any HS_ADMIN values
+				HandleValue[] hvOrigClean = new HandleValue[hvOrig.length];
+				int j = 0;
+				for (int i = 0; i < hvOrig.length; i++) {
+					if (hvOrig[i].getTypeAsString().equals("HS_ADMIN")) {
+						continue;
+					}
+					hvOrigClean[j] = hvOrig[i];
+					j++;
+				}
+				if (j > 0) {
+					// remove old non-admin handle values
+					HandleValue[] hvOrigCleanCopied = new HandleValue[j];
+					System.arraycopy(hvOrigClean, 0, hvOrigCleanCopied, 0, j);
+					hsAdapter.deleteHandleValues(handleref.getHandle(), hvOrigCleanCopied);
+				}
+				// add new handle values
+				hsAdapter.addHandleValues(handleref.getHandle(), handlevalues);
+			}
+		}
+		catch (Exception exc) {
+			StringWriter wr = new StringWriter();
+			PrintWriter pwr = new PrintWriter(wr);
+			exc.printStackTrace(pwr);
+			pwr.flush();
+			wr.flush();
+			resp.sendError(500, "Error while processing the request.\n\n"+wr.toString());
+			return;
+		}
+	}
 
 }
