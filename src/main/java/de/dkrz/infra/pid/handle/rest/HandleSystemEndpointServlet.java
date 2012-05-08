@@ -2,6 +2,7 @@ package de.dkrz.infra.pid.handle.rest;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -164,6 +165,72 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	}
 	
 	/**
+	 * Parses the JSON input from the given Reader into a vector of HandleValue instances.
+	 * 
+	 * @param reader
+	 * @return Vectory<HandleValue> containing the parsed data
+	 * @throws IOException 
+	 * @throws JsonParseException 
+	 */
+	protected Vector<HandleValue> parseJSONHandleValues(Reader reader) throws JsonParseException, IOException {
+		BASE64Decoder base64 = new BASE64Decoder();
+		Vector<HandleValue> hvNew = new Vector<HandleValue>();
+		/* The method will replace all current values on the handle with the given values (JSON encoded)
+		 * plus an admin handle value */
+		JsonParser json = jsonFactory.createJsonParser(reader);
+		// parse JSON. Variations exist. First, find out if base entity is array or object.
+		JsonToken baseEle = json.nextToken();
+		if (baseEle.equals(JsonToken.START_ARRAY)) {
+			// array-based JSON. Iterate all elements of the array.
+			JsonToken ele = json.nextToken();
+			while (!ele.equals(JsonToken.END_ARRAY)) {
+				if (ele.equals(JsonToken.START_OBJECT)) {
+					// read fields: index, type, data
+					int index = 0;
+					String type = null;
+					String data = null;
+					JsonToken field = json.nextToken();
+					while (!field.equals(JsonToken.END_OBJECT)) {
+						if (!field.equals(JsonToken.FIELD_NAME)) throw new IllegalArgumentException("JSON format error - expected field name - at "+json.getCurrentLocation());
+						String fieldName = json.getText();
+						if (fieldName.equalsIgnoreCase("index")) {
+							json.nextToken();
+							index = json.getIntValue();
+						}
+						else if (fieldName.equalsIgnoreCase("type")) {
+							json.nextToken();
+							type = json.getText();
+						}
+						else if (fieldName.equalsIgnoreCase("data")) {
+							// decode base64 later.. for now, we save text
+							json.nextToken();
+							data = json.getText();
+						}
+						field = json.nextToken();
+					}
+					// check read values
+					if ((type == null) || (data == null)) throw new IllegalArgumentException("JSON format error - must specify all of index, type and data - near "+json.getCurrentLocation());
+					if (index < 0) throw new IllegalArgumentException("Illegal index value ("+index+") - must be positive - near "+json.getCurrentLocation());
+					// now decode base64 data if applicable
+					byte[] data_byte = null;
+					if (!isStringType(type)) {
+						data_byte = base64.decodeBuffer(data);
+					}
+					else data_byte = data.getBytes();
+					// values are ok; now assign HandleValue
+					hvNew.add(new HandleValue(index, type.getBytes(), data_byte));
+				}
+				else throw new IllegalArgumentException("JSON format error - expected start of an object at "+json.getCurrentLocation());
+				ele = json.nextToken();
+			}
+		} else if (baseEle.equals(JsonToken.START_OBJECT)) {
+			// object-based JSON.
+			throw new IllegalArgumentException("Using an object as the JSON base element is not yet implemented!");
+		} else throw new IllegalArgumentException("Base JSON element must be an Array or an Object!");
+		return hvNew;
+	}
+	
+	/**
 	 * POST request to replace all values of a handle and create a new handle if it does not exist yet.
 	 * The method will add an admin handle value at index 100 automatically, unless the given values contain such a 
 	 * value at any index.  
@@ -195,63 +262,8 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			resp.sendError(400, exc.getMessage());
 			return;
 		}
-		BASE64Decoder base64 = new BASE64Decoder();
-		try {
-			Vector<HandleValue> hvNew = new Vector<HandleValue>();
-			boolean hvNewContainsAdminValue = false;
-			/* The method will replace all current values on the handle with the given values (JSON encoded)
-			 * plus an admin handle value */
-			JsonParser json = jsonFactory.createJsonParser(req.getReader());
-			// parse JSON. Variations exist. First, find out if base entity is array or object.
-			JsonToken baseEle = json.nextToken();
-			if (baseEle.equals(JsonToken.START_ARRAY)) {
-				// array-based JSON. Iterate all elements of the array.
-				JsonToken ele = json.nextToken();
-				while (!ele.equals(JsonToken.END_ARRAY)) {
-					if (ele.equals(JsonToken.START_OBJECT)) {
-						// read fields: index, type, data
-						int index = 0;
-						String type = null;
-						String data = null;
-						JsonToken field = json.nextToken();
-						while (!field.equals(JsonToken.END_OBJECT)) {
-							if (!field.equals(JsonToken.FIELD_NAME)) throw new IllegalArgumentException("JSON format error - expected field name - at "+json.getCurrentLocation());
-							String fieldName = json.getText();
-							if (fieldName.equalsIgnoreCase("index")) {
-								json.nextToken();
-								index = json.getIntValue();
-							}
-							else if (fieldName.equalsIgnoreCase("type")) {
-								json.nextToken();
-								type = json.getText();
-							}
-							else if (fieldName.equalsIgnoreCase("data")) {
-								// decode base64 later.. for now, we save text
-								json.nextToken();
-								data = json.getText();
-							}
-							field = json.nextToken();
-						}
-						// check read values
-						if ((type == null) || (data == null)) throw new IllegalArgumentException("JSON format error - must specify all of index, type and data - near "+json.getCurrentLocation());
-						if (index < 0) throw new IllegalArgumentException("Illegal index value ("+index+") - must be positive - near "+json.getCurrentLocation());
-						// now decode base64 data if applicable
-						byte[] data_byte = null;
-						if (!isStringType(type)) {
-							data_byte = base64.decodeBuffer(data);
-						}
-						else data_byte = data.getBytes();
-						// values are ok; now assign HandleValue
-						hvNew.add(new HandleValue(index, type.getBytes(), data_byte));
-						if (type.equals("HS_ADMIN")) hvNewContainsAdminValue = true;
-					}
-					else throw new IllegalArgumentException("JSON format error - expected start of an object at "+json.getCurrentLocation());
-					ele = json.nextToken();
-				}
-			} else if (baseEle.equals(JsonToken.START_OBJECT)) {
-				// object-based JSON.
-				throw new IllegalArgumentException("Using an object as the JSON base element is not yet implemented!");
-			} else throw new IllegalArgumentException("Base JSON element must be an Array or an Object!");
+		try{
+			Vector<HandleValue> hvNew = parseJSONHandleValues(req.getReader());
 			HandleValue hvAdmin = hsAdapter.createAdminValue(authInfo.getAdminHandle(), authInfo.getKeyIndex(), DEFAULT_ADMIN_VALUE_INDEX);
 			HandleValue[] hvOrig = null;
 			// check if handle exists
@@ -267,6 +279,13 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			handlevalues = hvNew.toArray(handlevalues);
 			if (doCreate) {
 				// handle did not exist; create handle with new values
+				boolean hvNewContainsAdminValue = false;
+				for (HandleValue hv: hvNew) {
+					if (hv.getTypeAsString().equals("HS_ADMIN")) {
+						hvNewContainsAdminValue = true;
+						break;
+					}
+				}
 				if (!hvNewContainsAdminValue) {
 					// add admin handle value if none present in new values yet
 					hvNew.add(hvAdmin);
@@ -293,6 +312,114 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 				}
 				// add new handle values
 				hsAdapter.addHandleValues(handleref.getHandle(), handlevalues);
+			}
+		}
+		catch (Exception exc) {
+			StringWriter wr = new StringWriter();
+			PrintWriter pwr = new PrintWriter(wr);
+			exc.printStackTrace(pwr);
+			pwr.flush();
+			wr.flush();
+			resp.sendError(500, "Error while processing the request.\n\n"+wr.toString());
+			return;
+		}
+	}
+	
+	/**
+	 * PUT request to update values on an existing Handle. The method will fail if the specified Handle does not exist.
+	 * 
+	 * The method does not support index prefixes since specific handle values can be addressed in the JSON data.
+	 * 
+	 * The JSON format is basically the same as for the POST method. However, it is possible to remove handle values
+	 * if their index is given, but type and data are left empty (empty string). In this case, the method will remove
+	 * these index values. 
+	 * 
+	 * The method can be used to manipulate HS_ADMIN values, though this is not recommended. The method will check and
+	 * fail if the last HS_ADMIN value is in danger of being removed.
+	 */
+	@Override
+	protected void doPut(HttpServletRequest req, HttpServletResponse resp)
+			throws ServletException, IOException {
+		if (!req.getContentType().equals("application/json")) {
+			resp.sendError(415, "Only application/json is allowed as request MIME type.");
+			return;
+		}
+		HandleReference handleref;
+		try {
+			handleref = determineHandleReference(req.getRequestURI(), false);
+		}
+		catch (IllegalArgumentException exc) {
+			resp.sendError(400, exc.getMessage());
+			return;
+		}
+		try {
+			Vector<HandleValue> hvNew = parseJSONHandleValues(req.getReader());
+			// get old handle values
+			HandleValue[] hvOrig = null;
+			try {
+				hvOrig = hsAdapter.resolveHandle(handleref.getHandle(), null, null); 
+			}
+			catch (HandleException exc) {
+				throw new IllegalStateException("Handle "+handleref.getHandle()+" does not exist. Use POST method to create new Handles!");
+			}
+			int hsadminsLost = 0;
+			int hsadminsGained = 0;
+			/* Go through hvNew and determine index values to delete, add and update. */
+			Vector<HandleValue> hvDelete = new Vector<HandleValue>();
+			Vector<HandleValue> hvAdd = new Vector<HandleValue>();
+			Vector<HandleValue> hvUpdate = new Vector<HandleValue>();
+			for (HandleValue hv: hvNew) {
+				int index = hv.getIndex();
+				// check if original value exists
+				boolean valueExists = false;
+				boolean origIsHSAdmin = false;
+				for (HandleValue hvo: hvOrig) {
+					if (hvo.getIndex() == index) {
+						valueExists = true;
+						if (hvo.getTypeAsString().equals("HS_ADMIN")) origIsHSAdmin = true;
+						break;
+					}
+				}
+				if ((hv.getData().length == 0) && (hv.getType().length == 0)) {
+					// delete this value (but only if it still exists)
+					if (valueExists) {
+						hvDelete.add(hv);
+						if (origIsHSAdmin) hsadminsLost++;
+					}
+					continue;
+				}
+				if (hv.getTypeAsString().equals("HS_ADMIN")) hsadminsGained++;
+				if (valueExists) {
+					hvUpdate.add(hv);
+					if (origIsHSAdmin) hsadminsLost++;
+				}
+				else hvAdd.add(hv);
+			}
+			/* security check: prevent removal of ALL HS_ADMIN values */
+			int hsadminsOrig = 0;
+			for (HandleValue hv: hvOrig) {
+				if (hv.getTypeAsString().equals("HS_ADMIN")) hsadminsOrig++;
+			}
+			if (hsadminsOrig+hsadminsGained-hsadminsLost <= 0) {
+				throw new Exception("You are not allowed to remove the last HS_ADMIN value from a Handle!");
+			}
+			/* Update values */
+			if (hvUpdate.size() > 0) {
+				HandleValue[] arr = new HandleValue[hvUpdate.size()];
+				arr = hvUpdate.toArray(arr);
+				hsAdapter.updateHandleValues(handleref.getHandle(), arr);
+			}
+			/* Add values */
+			if (hvAdd.size() > 0) {
+				HandleValue[] arr = new HandleValue[hvAdd.size()];
+				arr = hvAdd.toArray(arr);
+				hsAdapter.addHandleValues(handleref.getHandle(), arr);
+			}
+			/* Delete values */
+			if (hvDelete.size() > 0) {
+				HandleValue[] arr = new HandleValue[hvDelete.size()];
+				arr = hvDelete.toArray(arr);
+				hsAdapter.deleteHandleValues(handleref.getHandle(), arr);
 			}
 		}
 		catch (Exception exc) {
