@@ -285,9 +285,6 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			catch (HandleException exc) {
 				doCreate = true;
 			}
-			// transform hvNew to array
-			HandleValue[] handlevalues = new HandleValue[hvNew.size()];
-			handlevalues = hvNew.toArray(handlevalues);
 			if (doCreate) {
 				// handle did not exist; create handle with new values
 				boolean hvNewContainsAdminValue = false;
@@ -301,6 +298,9 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 					// add admin handle value if none present in new values yet
 					hvNew.add(hvAdmin);
 				}
+				// transform hvNew to array
+				HandleValue[] handlevalues = new HandleValue[hvNew.size()];
+				handlevalues = hvNew.toArray(handlevalues);
 				hsAdapter.createHandle(handleref.getHandle(), handlevalues);
 			}
 			else {
@@ -321,6 +321,9 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 					System.arraycopy(hvOrigClean, 0, hvOrigCleanCopied, 0, j);
 					hsAdapter.deleteHandleValues(handleref.getHandle(), hvOrigCleanCopied);
 				}
+				// transform hvNew to array
+				HandleValue[] handlevalues = new HandleValue[hvNew.size()];
+				handlevalues = hvNew.toArray(handlevalues);
 				// add new handle values
 				hsAdapter.addHandleValues(handleref.getHandle(), handlevalues);
 			}
