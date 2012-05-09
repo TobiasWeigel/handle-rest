@@ -8,6 +8,7 @@ import java.security.PrivateKey;
 import net.handle.hdllib.HandleException;
 import net.handle.hdllib.Util;
 
+import org.apache.log4j.BasicConfigurator;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -19,6 +20,7 @@ public final class Main {
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
+		BasicConfigurator.configure();
 		if (args.length < 4) {
 			System.out.println("Parameters: <port number> <admin handle> <handle key index> <key file> <cipher>");
 			System.out.println("");

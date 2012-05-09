@@ -1,17 +1,11 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>de.dkrz.infra.pid.handle.rest</groupId>
   <artifactId>handle-rest</artifactId>
-  <packaging>jar</packaging>
-  <version>0.1</version>
   <name>handle-rest</name>
+  <version>0.1</version>
   <url>http://maven.apache.org</url>
-  
-  <properties>
-    <jettyVersion>7.6.3.v20120416</jettyVersion>
-  </properties>
- 
   <dependencies>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
@@ -19,10 +13,18 @@
       <version>${jettyVersion}</version>
     </dependency>
     <dependency>
-  	  <groupId>com.fasterxml.jackson.core</groupId>
-  	  <artifactId>jackson-core</artifactId>
-  	  <version>2.0.0</version>
-	</dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>2.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.9</version>
+    </dependency>
   </dependencies>
-  
+  <properties>
+    <jettyVersion>7.6.3.v20120416</jettyVersion>
+  </properties>
 </project>
+

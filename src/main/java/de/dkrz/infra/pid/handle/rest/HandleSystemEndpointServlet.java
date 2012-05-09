@@ -6,13 +6,15 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Vector;
-import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import org.apache.log4j.Logger;
 
 import sun.misc.BASE64Decoder;
 
@@ -65,7 +67,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 
 	private static final int DEFAULT_ADMIN_VALUE_INDEX = 100;
 	
-	private final Logger logger = Logger.getLogger(this.getClass().getName());
+	private final static Logger logger = Logger.getLogger(HandleSystemEndpointServlet.class);
 	protected HSAdapter hsAdapter;
 	protected HandleAuthorizationInfo authInfo;
 	protected JsonFactory jsonFactory;
@@ -129,16 +131,20 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
+		logger.debug("GET...");
 		HandleReference handleref;
 		try {
 			handleref = determineHandleReference(req.getRequestURI());
 		}
 		catch (IllegalArgumentException exc) {
 			resp.sendError(400, exc.getMessage());
+			logger.debug("Could not determine Handle reference due to an Exception.", exc);
 			return;
 		}
 		try {
+			logger.debug("Trying to look up Handle "+handleref.getHandle());
 			HandleValue[] allhv = hsAdapter.resolveHandle(handleref.getHandle(), null, handleref.getIndexes());
+			logger.debug("Looked up Handle "+handleref.getHandle()+"; it has values: "+Arrays.toString(allhv));
 			// encode all values in JSON
 			JsonGenerator json = jsonFactory.createJsonGenerator(resp.getWriter());
 			json.writeStartObject();
@@ -158,15 +164,12 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		}
 		catch (HandleException exc) {
 			resp.sendError(500, "Could not resolve Handle: "+exc.getLocalizedMessage()+" ["+exc.getCode()+"]");
+			logger.error(exc);
 			return;
 		}
 		catch (Exception exc) {
-			StringWriter wr = new StringWriter();
-			PrintWriter pwr = new PrintWriter(wr);
-			exc.printStackTrace(pwr);
-			pwr.flush();
-			wr.flush();
-			resp.sendError(500, "Error during Handle lookup or JSON encoding.\n\n"+wr.toString());
+			resp.sendError(500, "Error while processing the request: "+exc.getMessage());
+			logger.error(exc);
 			return;
 		}
 	}
@@ -261,8 +264,10 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
+		logger.debug("POST...");
 		if (!req.getContentType().equals("application/json")) {
 			resp.sendError(415, "Only application/json is allowed as request MIME type.");
+			logger.debug("Refused POST request due to wrong MIME type: "+req.getContentType());
 			return;
 		}
 		HandleReference handleref;
@@ -271,9 +276,11 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		}
 		catch (IllegalArgumentException exc) {
 			resp.sendError(400, exc.getMessage());
+			logger.debug("Could not determine Handle reference due to an Exception.", exc);
 			return;
 		}
 		try{
+			logger.debug("Processing POST request for Handle "+handleref);
 			Vector<HandleValue> hvNew = parseJSONHandleValues(req.getReader());
 			HandleValue hvAdmin = hsAdapter.createAdminValue(authInfo.getAdminHandle(), authInfo.getKeyIndex(), DEFAULT_ADMIN_VALUE_INDEX);
 			HandleValue[] hvOrig = null;
@@ -301,6 +308,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 				// transform hvNew to array
 				HandleValue[] handlevalues = new HandleValue[hvNew.size()];
 				handlevalues = hvNew.toArray(handlevalues);
+				logger.debug("Creating Handle "+handleref.getHandle()+" with values "+Arrays.toString(handlevalues));
 				hsAdapter.createHandle(handleref.getHandle(), handlevalues);
 			}
 			else {
@@ -325,16 +333,13 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 				HandleValue[] handlevalues = new HandleValue[hvNew.size()];
 				handlevalues = hvNew.toArray(handlevalues);
 				// add new handle values
+				logger.debug("Adding values to Handle "+handleref.getHandle()+": "+Arrays.toString(handlevalues));
 				hsAdapter.addHandleValues(handleref.getHandle(), handlevalues);
 			}
 		}
 		catch (Exception exc) {
-			StringWriter wr = new StringWriter();
-			PrintWriter pwr = new PrintWriter(wr);
-			exc.printStackTrace(pwr);
-			pwr.flush();
-			wr.flush();
-			resp.sendError(500, "Error while processing the request.\n\n"+wr.toString());
+			resp.sendError(500, "Error while processing the request: "+exc.getMessage());
+			logger.error(exc);
 			return;
 		}
 	}
@@ -354,8 +359,10 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	@Override
 	protected void doPut(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
+		logger.debug("PUT...");
 		if (!req.getContentType().equals("application/json")) {
 			resp.sendError(415, "Only application/json is allowed as request MIME type.");
+			logger.debug("Refused PUT request due to wrong MIME type: "+req.getContentType());
 			return;
 		}
 		HandleReference handleref;
@@ -364,9 +371,11 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		}
 		catch (IllegalArgumentException exc) {
 			resp.sendError(400, exc.getMessage());
+			logger.error(exc);
 			return;
 		}
 		try {
+			logger.debug("Processing PUT request for Handle "+handleref);
 			Vector<HandleValue> hvNew = parseJSONHandleValues(req.getReader());
 			// get old handle values
 			HandleValue[] hvOrig = null;
@@ -437,12 +446,8 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			}
 		}
 		catch (Exception exc) {
-			StringWriter wr = new StringWriter();
-			PrintWriter pwr = new PrintWriter(wr);
-			exc.printStackTrace(pwr);
-			pwr.flush();
-			wr.flush();
-			resp.sendError(500, "Error while processing the request.\n\n"+wr.toString());
+			resp.sendError(500, "Error while processing the request: "+exc.getMessage());
+			logger.error(exc);
 			return;
 		}
 	}
@@ -472,6 +477,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		}
 		catch (HandleException exc) {
 			resp.sendError(404, "Handle does not exist.");
+			logger.error(exc);
 			return;
 		}
 		try {
@@ -515,12 +521,8 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			}
 		}
 		catch (Exception exc) {
-			StringWriter wr = new StringWriter();
-			PrintWriter pwr = new PrintWriter(wr);
-			exc.printStackTrace(pwr);
-			pwr.flush();
-			wr.flush();
-			resp.sendError(500, "Error while processing the request.\n\n"+wr.toString());
+			resp.sendError(500, "Error while processing the request: "+exc.getMessage());
+			logger.error(exc);
 			return;
 		}
 	}
