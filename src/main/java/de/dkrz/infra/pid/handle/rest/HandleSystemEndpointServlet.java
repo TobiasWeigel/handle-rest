@@ -151,11 +151,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			for (HandleValue hv: allhv) {
 				json.writeObjectFieldStart(((Integer)hv.getIndex()).toString());
 				json.writeStringField("type", hv.getTypeAsString());
-				if (isStringType(hv.getTypeAsString())) {
-					json.writeStringField("data", hv.getDataAsString());
-				} else {
-					json.writeBinaryField("data", hv.getData());
-				}
+				json.writeStringField("data", hv.getDataAsString());
 				json.writeStringField("perm", hv.getPermissionString());
 				json.writeEndObject();
 			}
@@ -172,10 +168,6 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			logger.error(exc);
 			return;
 		}
-	}
-	
-	public static boolean isStringType(String typeAsString) {
-		return (typeAsString.equals("URL") || typeAsString.equals("URN") || typeAsString.equals("EMAIL") || typeAsString.equals("HS_ALIAS"));
 	}
 	
 	/**
@@ -227,10 +219,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 					if (index < 0) throw new IllegalArgumentException("Illegal index value ("+index+") - must be positive - near "+json.getCurrentLocation());
 					// now decode base64 data if applicable
 					byte[] data_byte = null;
-					if (!isStringType(type)) {
-						data_byte = base64.decodeBuffer(data);
-					}
-					else data_byte = data.getBytes();
+					data_byte = data.getBytes();
 					// values are ok; now assign HandleValue
 					hvNew.add(new HandleValue(index, type.getBytes(), data_byte));
 				}
@@ -251,8 +240,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	 * 
 	 * The JSON format is array-based. The handle values must be provided as an array, where each array entry is an 
 	 * object with fields "index", "type" and "data". By default, the index field must be a positive integer, the type
-	 * field must be a string. The data field defaults to a base64 encoded string, however, if the type field is any one
-	 * of URL, URN, EMAIL or HS_ALIAS, the data field is passed as it is and not base64-decoded.
+	 * field must be a string. The data field is passed as it is (a String) and not base64-decoded or similarly encoded.
 	 * 
 	 * Special care is taken of HS_ADMIN values. If there is no HS_ADMIN value specified in the JSON data and the Handle
 	 * does not exist yet, the method will automatically add a default HS_ADMIN value. If the handle did exist, the 
