@@ -36,11 +36,13 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	protected final static class HandleReference {
 		
 		protected final String handle;
-		protected final int[] indexes;
+		protected int[] indexes;
 		
 		public HandleReference(String handle, int[] indexes) {
 			this.handle = handle;
-			this.indexes = indexes;
+			if (indexes == null) {
+				this.indexes = new int[0];
+			} else this.indexes = indexes;
 		}
 
 		public String getHandle() {
@@ -49,6 +51,15 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 
 		public int[] getIndexes() {
 			return indexes;
+		}
+
+		public int numIndexes() {
+			return indexes.length;
+		}
+		
+		public void setIndexes(int[] indexes) {
+			if (indexes == null) throw new IllegalArgumentException("'indexes' parameter must not be null!");
+			this.indexes = indexes;
 		}
 	}
 
@@ -420,6 +431,84 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 				HandleValue[] arr = new HandleValue[hvDelete.size()];
 				arr = hvDelete.toArray(arr);
 				hsAdapter.deleteHandleValues(handleref.getHandle(), arr);
+			}
+		}
+		catch (Exception exc) {
+			StringWriter wr = new StringWriter();
+			PrintWriter pwr = new PrintWriter(wr);
+			exc.printStackTrace(pwr);
+			pwr.flush();
+			wr.flush();
+			resp.sendError(500, "Error while processing the request.\n\n"+wr.toString());
+			return;
+		}
+	}
+
+	/**
+	 * DELETE request to delete Handles or specific Handle values via their index. If the given Handle or the specified
+	 * Handle values do not exist, the method will fail with HTTP code 404.
+	 * 
+	 * This method supports index prefixes, i.e. can be called with index:prefix/suffix to remove a specific Handle 
+	 * value. 
+	 */
+	@Override
+	protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
+			throws ServletException, IOException {
+		HandleReference handleref;
+		try {
+			handleref = determineHandleReference(req.getRequestURI(), true);
+		}
+		catch (IllegalArgumentException exc) {
+			resp.sendError(400, exc.getMessage());
+			return;
+		}
+		/* Check for Handle existence */
+		HandleValue[] hvOrig = null;
+		try {
+			hvOrig = hsAdapter.resolveHandle(handleref.getHandle(), null, null); 
+		}
+		catch (HandleException exc) {
+			resp.sendError(404, "Handle does not exist.");
+			return;
+		}
+		try {
+			if (handleref.numIndexes() > 0) {
+				/* Security check: prevent deletion of last HS_ADMIN value */
+				int numHSAdminLost = 0;
+				int numHSAdminPresent = 0;
+				Vector<HandleValue> valuesToDelete = new Vector<HandleValue>();
+				for (int idx: handleref.getIndexes()) {
+					// find corresponding original handle value
+					HandleValue hv = null;
+					for (HandleValue hvo: hvOrig) {
+						if (hvo.getIndex() == idx) {
+							hv = hvo;
+							break;
+						}
+					}
+					if (hv == null) {
+						throw new Exception("Handle value with index "+idx+" not found in Handle "+handleref.getHandle()+"!");
+					}
+					if (hv.getTypeAsString().equals("HS_ADMIN")) {
+						numHSAdminLost++;
+					}
+					valuesToDelete.add(hv);
+				}
+				for (HandleValue hv: hvOrig) {
+					if (hv.getTypeAsString().equals("HS_ADMIN")) {
+						numHSAdminPresent++;
+					}
+				}
+				if (numHSAdminPresent-numHSAdminLost <= 0) {
+					throw new Exception("You are not allowed to remove the last HS_ADMIN value from a Handle!");
+				}
+				/* Delete Handle value(s) */
+				HandleValue[] arr = new HandleValue[valuesToDelete.size()];
+				arr = valuesToDelete.toArray(arr);
+				hsAdapter.deleteHandleValues(handleref.getHandle(), arr);
+			} else {
+				/* Delete Handle */
+				hsAdapter.deleteHandle(handleref.getHandle());
 			}
 		}
 		catch (Exception exc) {
