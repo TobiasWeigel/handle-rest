@@ -43,8 +43,54 @@
       <version>1</version>
     </dependency>
   </dependencies>
+  
   <properties>
     <jettyVersion>7.6.3.v20120416</jettyVersion>
   </properties>
+  
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.4</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>de.dkrz.infra.pid.handle.rest.Main</mainClass>
+              <packageName>de.dkrz.infra.pid.handle.rest</packageName>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.3</version>
+        
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <phase>package</phase>
+          </execution>
+        </executions>
+        
+        <configuration>
+          <descriptors>
+            <descriptor>src/main/assembly/onejar.xml</descriptor>
+          </descriptors>
+          <archive>
+            <manifest>
+              <mainClass>de.dkrz.infra.pid.handle.rest.Main</mainClass>
+              <packageName>de.dkrz.infra.pid.handle.rest</packageName>
+            </manifest>
+          </archive>
+        </configuration>
+        
+      </plugin>
+    </plugins>
+  </build>
 </project>
 
