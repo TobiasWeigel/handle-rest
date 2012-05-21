@@ -468,6 +468,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	@Override
 	protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
+		logger.debug("DELETE...");
 		HandleReference handleref;
 		try {
 			handleref = determineHandleReference(req, true);
@@ -487,6 +488,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			return;
 		}
 		try {
+			logger.debug("Processing DELETE request for Handle "+handleref);
 			if (handleref.numIndexes() > 0) {
 				/* Security check: prevent deletion of last HS_ADMIN value */
 				int numHSAdminLost = 0;
