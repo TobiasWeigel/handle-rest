@@ -63,6 +63,17 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			if (indexes == null) throw new IllegalArgumentException("'indexes' parameter must not be null!");
 			this.indexes = indexes;
 		}
+		
+		@Override
+		public String toString() {
+			if (this.indexes.length == 0)
+				return this.handle;
+			else if (this.indexes.length == 1)
+				return this.indexes[0]+":"+this.handle;
+			else {
+				return "[...]:"+this.handle;
+			}
+		}
 	}
 
 	private static final int DEFAULT_ADMIN_VALUE_INDEX = 100;
@@ -91,12 +102,16 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	 * @return a HandleReference object
 	 * @throws IllegalArgumentException if the URI is malformed
 	 */
-	protected static HandleReference determineHandleReference(String uri, boolean allowIndexes) {
-		String[] parts = uri.split("/", 3);
-		if (parts.length < 3) {
-			throw new IllegalArgumentException("Bad Request: No handle given.");
+	protected static HandleReference determineHandleReference(HttpServletRequest req, boolean allowIndexes) {
+		if (req.getPathInfo() == null) {
+			throw new IllegalArgumentException("Bad Request: Invalid path or no Handle given.");
 		}
-		String handle = parts[2];
+		String handle = req.getPathInfo();
+		if (handle.startsWith("/"))
+			handle = handle.substring(1);
+		if (handle.length() == 0) {
+			throw new IllegalArgumentException("Bad Request: No Handle given.");
+		}
 		int[] indexes = null;
 		// detect key index prefixed to Handle prefix (key:prefix/suffix)
 		if ((handle.indexOf(":") >= 0) && (handle.indexOf(":") < handle.indexOf("/"))) {
@@ -124,8 +139,8 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	 * @return a HandleReference object
 	 * @throws IllegalArgumentException if the URI is malformed
 	 */
-	public static HandleReference determineHandleReference(String uri) {
-		return determineHandleReference(uri, true);
+	public static HandleReference determineHandleReference(HttpServletRequest req) {
+		return determineHandleReference(req, true);
 	}
 
 	@Override
@@ -134,7 +149,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		logger.debug("GET...");
 		HandleReference handleref;
 		try {
-			handleref = determineHandleReference(req.getRequestURI());
+			handleref = determineHandleReference(req);
 		}
 		catch (IllegalArgumentException exc) {
 			resp.sendError(400, exc.getMessage());
@@ -147,19 +162,20 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			logger.debug("Looked up Handle "+handleref.getHandle()+"; it has values: "+Arrays.toString(allhv));
 			// encode all values in JSON
 			JsonGenerator json = jsonFactory.createJsonGenerator(resp.getWriter());
-			json.writeStartObject();
+			json.writeStartArray();
 			for (HandleValue hv: allhv) {
-				json.writeObjectFieldStart(((Integer)hv.getIndex()).toString());
+				json.writeStartObject();
+				json.writeStringField("index", ((Integer)hv.getIndex()).toString());
 				json.writeStringField("type", hv.getTypeAsString());
 				json.writeStringField("data", hv.getDataAsString());
 				json.writeStringField("perm", hv.getPermissionString());
 				json.writeEndObject();
 			}
-			json.writeEndObject();
+			json.writeEndArray();
 			json.close();
 		}
 		catch (HandleException exc) {
-			resp.sendError(500, "Could not resolve Handle: "+exc.getLocalizedMessage()+" ["+exc.getCode()+"]");
+			resp.sendError(404, "Unknown Handle: "+exc.getLocalizedMessage()+" ["+exc.getCode()+"]");
 			logger.error(exc);
 			return;
 		}
@@ -234,7 +250,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	}
 	
 	/**
-	 * POST request to replace all values of a handle and create a new handle if it does not exist yet.
+	 * PUT request to replace all values of a handle (overwrite) and create a new handle if it does not exist yet.
 	 * The method will add an admin handle value at index 100 automatically, unless the given values contain such a 
 	 * value at any index.  
 	 * 
@@ -250,17 +266,17 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	 * This also means that this method is not suited for updating HS_ADMIN information on existing Handles! 
 	 */
 	@Override
-	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+	protected void doPut(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
-		logger.debug("POST...");
-		if (!req.getContentType().equals("application/json")) {
+		logger.debug("PUT...");
+		if ((req.getContentType() == null) || (!req.getContentType().equals("application/json"))) {
 			resp.sendError(415, "Only application/json is allowed as request MIME type.");
-			logger.debug("Refused POST request due to wrong MIME type: "+req.getContentType());
+			logger.debug("Refused PUT request due to wrong MIME type: "+req.getContentType());
 			return;
 		}
 		HandleReference handleref;
 		try {
-			handleref = determineHandleReference(req.getRequestURI(), false);
+			handleref = determineHandleReference(req, false);
 		}
 		catch (IllegalArgumentException exc) {
 			resp.sendError(400, exc.getMessage());
@@ -268,7 +284,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			return;
 		}
 		try{
-			logger.debug("Processing POST request for Handle "+handleref);
+			logger.debug("Processing PUT request for Handle "+handleref);
 			Vector<HandleValue> hvNew = parseJSONHandleValues(req.getReader());
 			HandleValue hvAdmin = hsAdapter.createAdminValue(authInfo.getAdminHandle(), authInfo.getKeyIndex(), DEFAULT_ADMIN_VALUE_INDEX);
 			HandleValue[] hvOrig = null;
@@ -333,7 +349,9 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	}
 	
 	/**
-	 * PUT request to update values on an existing Handle. The method will fail if the specified Handle does not exist.
+	 * POST request to update values on an existing Handle. The method will fail if the specified Handle does not exist.
+	 * Note that POST will not overwrite the whole resource, but modify it. Thus, it can be used to e.g. add a single 
+	 * new value to a Handle without affecting the existing values.
 	 * 
 	 * The method does not support index prefixes since specific handle values can be addressed in the JSON data.
 	 * 
@@ -345,17 +363,17 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	 * fail if the last HS_ADMIN value is in danger of being removed.
 	 */
 	@Override
-	protected void doPut(HttpServletRequest req, HttpServletResponse resp)
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
-		logger.debug("PUT...");
-		if (!req.getContentType().equals("application/json")) {
+		logger.debug("POST...");
+		if ((req.getContentType() == null) || (!req.getContentType().equals("application/json"))) {
 			resp.sendError(415, "Only application/json is allowed as request MIME type.");
-			logger.debug("Refused PUT request due to wrong MIME type: "+req.getContentType());
+			logger.debug("Refused POST request due to wrong MIME type: "+req.getContentType());
 			return;
 		}
 		HandleReference handleref;
 		try {
-			handleref = determineHandleReference(req.getRequestURI(), false);
+			handleref = determineHandleReference(req, false);
 		}
 		catch (IllegalArgumentException exc) {
 			resp.sendError(400, exc.getMessage());
@@ -363,7 +381,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			return;
 		}
 		try {
-			logger.debug("Processing PUT request for Handle "+handleref);
+			logger.debug("Processing POST request for Handle "+handleref);
 			Vector<HandleValue> hvNew = parseJSONHandleValues(req.getReader());
 			// get old handle values
 			HandleValue[] hvOrig = null;
@@ -371,7 +389,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 				hvOrig = hsAdapter.resolveHandle(handleref.getHandle(), null, null); 
 			}
 			catch (HandleException exc) {
-				throw new IllegalStateException("Handle "+handleref.getHandle()+" does not exist. Use POST method to create new Handles!");
+				throw new IllegalStateException("Handle "+handleref.getHandle()+" does not exist. Use PUT method to create new Handles!");
 			}
 			int hsadminsLost = 0;
 			int hsadminsGained = 0;
@@ -452,7 +470,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			throws ServletException, IOException {
 		HandleReference handleref;
 		try {
-			handleref = determineHandleReference(req.getRequestURI(), true);
+			handleref = determineHandleReference(req, true);
 		}
 		catch (IllegalArgumentException exc) {
 			resp.sendError(400, exc.getMessage());
