@@ -181,7 +181,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		}
 		catch (Exception exc) {
 			resp.sendError(500, "Error while processing the request: "+exc.getMessage());
-			logger.error(exc);
+			logger.error("Error during GET request:", exc);
 			return;
 		}
 	}
@@ -343,7 +343,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		}
 		catch (Exception exc) {
 			resp.sendError(500, "Error while processing the request: "+exc.getMessage());
-			logger.error(exc);
+			logger.error("Error during PUT request: ", exc);
 			return;
 		}
 	}
@@ -453,7 +453,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		}
 		catch (Exception exc) {
 			resp.sendError(500, "Error while processing the request: "+exc.getMessage());
-			logger.error(exc);
+			logger.error("Error during POST request:", exc);
 			return;
 		}
 	}
@@ -530,7 +530,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		}
 		catch (Exception exc) {
 			resp.sendError(500, "Error while processing the request: "+exc.getMessage());
-			logger.error(exc);
+			logger.error("Error during DELETE request:", exc);
 			return;
 		}
 	}
