@@ -202,6 +202,9 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		JsonParser json = jsonFactory.createJsonParser(reader);
 		// parse JSON. Variations exist. First, find out if base entity is array or object.
 		JsonToken baseEle = json.nextToken();
+		if (baseEle == null) {
+			throw new IllegalArgumentException("JSON format error - no base element found / empty content in request!");
+		}
 		if (baseEle.equals(JsonToken.START_ARRAY)) {
 			// array-based JSON. Iterate all elements of the array.
 			JsonToken ele = json.nextToken();
@@ -285,7 +288,13 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		}
 		try{
 			logger.debug("Processing PUT request for Handle "+handleref);
-			Vector<HandleValue> hvNew = parseJSONHandleValues(req.getReader());
+			Vector<HandleValue> hvNew;
+			if (req.getContentLength() <= 0) {
+				// empty content - just create Handle with admin value
+				hvNew = new Vector<HandleValue>();
+			} else {
+			    hvNew = parseJSONHandleValues(req.getReader());
+			}
 			HandleValue hvAdmin = hsAdapter.createAdminValue(authInfo.getAdminHandle(), authInfo.getKeyIndex(), DEFAULT_ADMIN_VALUE_INDEX);
 			HandleValue[] hvOrig = null;
 			// check if handle exists
@@ -382,6 +391,11 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		}
 		try {
 			logger.debug("Processing POST request for Handle "+handleref);
+			if (req.getContentLength() <= 0) {
+				resp.sendError(400, "Content missing in POST request!");
+				logger.debug("Content missing in POST request");
+				return;
+			}
 			Vector<HandleValue> hvNew = parseJSONHandleValues(req.getReader());
 			// get old handle values
 			HandleValue[] hvOrig = null;
