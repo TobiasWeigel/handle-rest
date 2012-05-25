@@ -17,8 +17,6 @@ import net.handle.hdllib.HandleValue;
 
 import org.apache.log4j.Logger;
 
-import sun.misc.BASE64Decoder;
-
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
