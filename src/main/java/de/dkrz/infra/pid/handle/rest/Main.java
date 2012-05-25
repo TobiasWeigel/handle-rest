@@ -1,9 +1,6 @@
 package de.dkrz.infra.pid.handle.rest;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.security.PrivateKey;
 
 import net.handle.hdllib.HandleException;
 import net.handle.hdllib.Util;
@@ -50,7 +47,7 @@ public final class Main {
 
 		byte[] keyfilecontents = null;
 		try {
-			keyfilecontents = readKeyFromFile(args[3]);
+			keyfilecontents = HandleAuthorizationInfo.readKeyFromFile(args[3]);
 		} catch (IOException exc) {
 			System.err.println("Error while reading from private key file!");
 			exc.printStackTrace(System.err);
@@ -101,19 +98,6 @@ public final class Main {
 			System.exit(20);
 		}
 
-	}
-
-	private static byte[] readKeyFromFile(String fn) throws IOException {
-		File f = new File(fn);
-		if (f.length() > 1024) {
-			throw new IOException("Secret Key file too large / illegal format!");
-		}
-		FileInputStream fis;
-		byte[] res = new byte[(int) f.length()];
-		fis = new FileInputStream(new File(fn));
-		fis.read(res);
-		fis.close();
-		return res;
 	}
 
 }

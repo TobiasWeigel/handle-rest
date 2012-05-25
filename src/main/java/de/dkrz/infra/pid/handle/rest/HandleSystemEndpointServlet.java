@@ -1,5 +1,7 @@
 package de.dkrz.infra.pid.handle.rest;
 
+import java.awt.geom.Path2D;
+import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Arrays;
@@ -84,12 +86,33 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	protected HandleAuthorizationInfo authInfo;
 	protected JsonFactory jsonFactory;
 
+	/**
+	 * Constructor that takes in a HandleAuthorizationInfo object.
+	 * 
+	 * @param authInfo
+	 * @throws HandleException
+	 */
 	public HandleSystemEndpointServlet(HandleAuthorizationInfo authInfo)
 			throws HandleException {
 		this.hsAdapter = HSAdapterFactory.newInstance(
 				authInfo.getAdminHandle(), authInfo.getKeyIndex(),
 				authInfo.getPrivateKey(), authInfo.getCipher());
 		this.authInfo = authInfo;
+		this.jsonFactory = new JsonFactory();
+	}
+	
+	/**
+	 * Constructor that will load the Handle Authoroization configuration from
+	 * a file "handleservletconfig.xml" in the current user's home directory.
+	 * 
+	 * @throws HandleException 
+	 */
+	public HandleSystemEndpointServlet() throws HandleException {
+		File configFile = new File(new File(System.getenv("HOME")), "handleservletconfig.xml");
+		this.authInfo = HandleAuthorizationInfo.createFromFile(configFile);
+		this.hsAdapter = HSAdapterFactory.newInstance(
+				authInfo.getAdminHandle(), authInfo.getKeyIndex(),
+				authInfo.getPrivateKey(), authInfo.getCipher());
 		this.jsonFactory = new JsonFactory();
 	}
 
