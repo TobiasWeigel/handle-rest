@@ -17,6 +17,7 @@ import net.handle.api.HSAdapterFactory;
 import net.handle.hdllib.HandleException;
 import net.handle.hdllib.HandleValue;
 
+import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Logger;
 
 import com.fasterxml.jackson.core.JsonFactory;
@@ -105,9 +106,10 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 	 * Constructor that will load the Handle Authoroization configuration from
 	 * a file "handleservletconfig.xml" in the current user's home directory.
 	 * 
-	 * @throws HandleException 
+	 * @throws Exception 
 	 */
-	public HandleSystemEndpointServlet() throws HandleException {
+	public HandleSystemEndpointServlet() throws Exception {
+		BasicConfigurator.configure();
 		File configFile = new File(new File(System.getenv("HOME")), "handleservletconfig.xml");
 		this.authInfo = HandleAuthorizationInfo.createFromFile(configFile);
 		this.hsAdapter = HSAdapterFactory.newInstance(
