@@ -421,6 +421,10 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 						+ ": " + Arrays.toString(handlevalues));
 				hsAdapter.addHandleValues(handleref.getHandle(), handlevalues);
 			}
+		} catch (JsonParseException exc) {
+			resp.sendError(400, "Malformed JSON data in request content: " + exc.getMessage());
+			logger.debug("Could not perform PUT operation due to malformed JSON data: " + exc.getMessage());
+			return;
 		} catch (Exception exc) {
 			resp.sendError(500,
 					"Error while processing the request: " + exc.getMessage());
@@ -557,6 +561,10 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 				arr = hvDelete.toArray(arr);
 				hsAdapter.deleteHandleValues(handleref.getHandle(), arr);
 			}
+		} catch (JsonParseException exc) {
+			resp.sendError(400, "Malformed JSON data in request content: " + exc.getMessage());
+			logger.debug("Could not perform POST operation due to malformed JSON data: " + exc.getMessage());
+			return;
 		} catch (Exception exc) {
 			resp.sendError(500,
 					"Error while processing the request: " + exc.getMessage());
