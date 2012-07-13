@@ -204,7 +204,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			json.writeStartArray();
 			for (HandleValue hv : allhv) {
 				json.writeStartObject();
-				json.writeStringField("index",
+				json.writeStringField("idx",
 						((Integer) hv.getIndex()).toString());
 				json.writeStringField("type", hv.getTypeAsString());
 				json.writeStringField("data", hv.getDataAsString());
@@ -266,7 +266,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 									"JSON format error - expected field name - at "
 											+ json.getCurrentLocation());
 						String fieldName = json.getText();
-						if (fieldName.equalsIgnoreCase("index")) {
+						if (fieldName.equalsIgnoreCase("idx")) {
 							json.nextToken();
 							index = json.getIntValue();
 						} else if (fieldName.equalsIgnoreCase("type")) {
