@@ -421,7 +421,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			}
 		} catch (JsonParseException exc) {
 			resp.sendError(400, "Malformed JSON data in request content: " + exc.getMessage());
-			logger.debug("Could not perform PUT operation due to malformed JSON data: " + exc.getMessage());
+			logger.error("Could not perform PUT operation due to malformed JSON data: ", exc);
 			return;
 		} catch (Exception exc) {
 			resp.sendError(500,
@@ -561,7 +561,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			}
 		} catch (JsonParseException exc) {
 			resp.sendError(400, "Malformed JSON data in request content: " + exc.getMessage());
-			logger.debug("Could not perform POST operation due to malformed JSON data: " + exc.getMessage());
+			logger.error("Could not perform POST operation due to malformed JSON data.", exc);
 			return;
 		} catch (Exception exc) {
 			resp.sendError(500,
