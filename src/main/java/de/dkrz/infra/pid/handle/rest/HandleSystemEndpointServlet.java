@@ -187,9 +187,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			handleref = determineHandleReference(req);
 		} catch (IllegalArgumentException exc) {
 			resp.sendError(400, exc.getMessage());
-			logger.debug(
-					"Could not determine Handle reference due to an Exception.",
-					exc);
+			logger.error("Could not determine Handle reference due to an Exception.", exc);
 			return;
 		}
 		try {
@@ -216,12 +214,12 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		} catch (HandleException exc) {
 			resp.sendError(404, "Unknown Handle: " + exc.getLocalizedMessage()
 					+ " [" + exc.getCode() + "]");
-			logger.error(exc);
+			logger.error("Unknown Handle: "+handleref.getHandle(), exc);
 			return;
 		} catch (Exception exc) {
 			resp.sendError(500,
 					"Error while processing the request: " + exc.getMessage());
-			logger.error("Error during GET request:", exc);
+			logger.error("Error during GET request.", exc);
 			return;
 		}
 	}
