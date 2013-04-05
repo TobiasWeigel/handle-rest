@@ -194,8 +194,6 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			logger.debug("Trying to look up Handle " + handleref.getHandle());
 			HandleValue[] allhv = hsAdapter.resolveHandle(
 					handleref.getHandle(), null, handleref.getIndexes());
-			logger.debug("Looked up Handle " + handleref.getHandle()
-					+ "; it has values: " + Arrays.toString(allhv));
 			// encode all values in JSON
 			JsonGenerator json = jsonFactory.createJsonGenerator(resp
 					.getWriter());
