@@ -477,8 +477,6 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 				return;
 			}
 			req.getReader().mark(4096);
-			logger.debug("Request data: " + req.getReader().readLine());
-			req.getReader().reset();
 			Vector<HandleValue> hvNew = parseJSONHandleValues(req.getReader());
 			// get old handle values
 			HandleValue[] hvOrig = null;
