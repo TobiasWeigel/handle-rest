@@ -547,7 +547,6 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			if (hvAdd.size() > 0) {
 				HandleValue[] arr = new HandleValue[hvAdd.size()];
 				arr = hvAdd.toArray(arr);
-				logger.debug("Adding values: "+arr.toString());
 				hsAdapter.addHandleValues(handleref.getHandle(), arr);
 			}
 			/* Delete values */
