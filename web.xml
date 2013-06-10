@@ -1,20 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
- <!DOCTYPE web-app
-     PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.2//EN"
-     "http://java.sun.com/j2ee/dtds/web-app_2_2.dtd">
+<!DOCTYPE web-app
+    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.2//EN"
+    "http://java.sun.com/j2ee/dtds/web-app_2_2.dtd">
  
- <!--  Customized web.xml -->
+<!-- Customized web.xml -->
  
- <web-app>
-     <servlet>
-         <servlet-name>HandleSystemEndpointServlet</servlet-name>
-         <servlet-class>de.dkrz.infra.pid.handle.rest.HandleSystemEndpointServlet</servlet-class>
-     </servlet>
+<web-app>
+
+    <!-- Application servlets -->
  
-     <servlet-mapping>
-         <servlet-name>HandleSystemEndpointServlet</servlet-name>
-         <url-pattern>/*</url-pattern>
-     </servlet-mapping>
+    <servlet>
+        <servlet-name>HandleRootServlet</servlet-name>
+        <servlet-class>de.dkrz.infra.pid.handle.rest.HandleRootServlet</servlet-class>
+    </servlet>
+    
+    <servlet>
+        <servlet-name>IndividualHandleServlet</servlet-name>
+        <servlet-class>de.dkrz.infra.pid.handle.rest.IndividualHandleServlet</servlet-class>
+    </servlet>
+ 
+    <servlet-mapping>
+        <servlet-name>HandleRootServlet</servlet-name>
+        <url-pattern>/handles</url-pattern>
+    </servlet-mapping>
+     
+    <servlet-mapping>
+        <servlet-name>IndividualHandleServlet</servlet-name>
+        <url-pattern>/handles/*</url-pattern>
+    </servlet-mapping>
      
     <security-constraint>
         <web-resource-collection>
@@ -38,6 +51,6 @@
     <login-config>
         <auth-method>BASIC</auth-method>
     </login-config>
-     
-
- </web-app>
+    
+    
+</web-app>
