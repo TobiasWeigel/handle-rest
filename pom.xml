@@ -102,6 +102,7 @@
               <addClasspath>true</addClasspath>
             </manifest>
           </archive>
+          <webXml>web.xml</webXml>
         </configuration>
       </plugin> 
       

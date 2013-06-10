@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+ <!DOCTYPE web-app
+     PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.2//EN"
+     "http://java.sun.com/j2ee/dtds/web-app_2_2.dtd">
+ 
+ <!--  Customized web.xml -->
+ 
+ <web-app>
+     <servlet>
+         <servlet-name>HandleSystemEndpointServlet</servlet-name>
+         <servlet-class>de.dkrz.infra.pid.handle.rest.HandleSystemEndpointServlet</servlet-class>
+     </servlet>
+ 
+     <servlet-mapping>
+         <servlet-name>HandleSystemEndpointServlet</servlet-name>
+         <url-pattern>/*</url-pattern>
+     </servlet-mapping>
+     
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>Authentication always required</web-resource-name>
+            <url-pattern>/*</url-pattern>
+            <http-method>GET</http-method>
+            <http-method>POST</http-method>
+            <http-method>PUT</http-method>
+            <http-method>DELETE</http-method>
+        </web-resource-collection>
+        <auth-constraint>
+            <role-name>handle</role-name>
+        </auth-constraint>
+
+        <user-data-constraint>
+            <!-- transport-guarantee can be CONFIDENTIAL, INTEGRAL, or NONE -->
+            <transport-guarantee>NONE</transport-guarantee>
+        </user-data-constraint>
+    </security-constraint>
+
+    <login-config>
+        <auth-method>BASIC</auth-method>
+    </login-config>
+     
+
+ </web-app>
