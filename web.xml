@@ -21,12 +21,7 @@
  
     <servlet-mapping>
         <servlet-name>HandleRootServlet</servlet-name>
-        <url-pattern>/handles</url-pattern>
-    </servlet-mapping>
-     
-    <servlet-mapping>
-        <servlet-name>IndividualHandleServlet</servlet-name>
-        <url-pattern>/handles/*</url-pattern>
+        <url-pattern>/*</url-pattern>
     </servlet-mapping>
      
     <security-constraint>

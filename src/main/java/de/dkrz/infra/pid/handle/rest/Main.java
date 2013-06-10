@@ -10,6 +10,8 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
+import de.dkrz.infra.pid.handle.rest.core.HandleAuthorizationInfo;
+
 public final class Main {
 
 	/**

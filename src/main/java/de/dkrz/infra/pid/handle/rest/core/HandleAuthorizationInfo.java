@@ -1,4 +1,4 @@
-package de.dkrz.infra.pid.handle.rest;
+package de.dkrz.infra.pid.handle.rest.core;
 
 import java.io.File;
 import java.io.FileInputStream;

@@ -11,8 +11,16 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.parsers.ParserConfigurationException;
+
+import net.handle.api.HSAdapter;
+import net.handle.api.HSAdapterFactory;
+import net.handle.hdllib.HandleException;
 
 import org.apache.log4j.Logger;
+import org.xml.sax.SAXException;
+
+import de.dkrz.infra.pid.handle.rest.core.HandleAuthorizationInfo;
 
 import freemarker.template.Configuration;
 import freemarker.template.DefaultObjectWrapper;
@@ -32,19 +40,27 @@ public class HandleRootServlet extends HttpServlet {
 			.getLogger(HandleRootServlet.class);
 
 	protected Configuration freemarkerConfig;
-	
+	protected HSAdapter hsAdapter;
+
 	private RootHTMLRetriever rootHTMLRetriever;
 	private RootJSONRetriever rootJSONRetriever;
 
-	public HandleRootServlet() throws IOException {
+	public HandleRootServlet() throws IOException, SAXException,
+			ParserConfigurationException, HandleException {
 		super();
 		this.freemarkerConfig = new Configuration();
 		this.freemarkerConfig.setClassForTemplateLoading(this.getClass(),
 				"/templates");
 
 		this.freemarkerConfig.setObjectWrapper(new DefaultObjectWrapper());
+		HandleAuthorizationInfo authInfo = HandleAuthorizationInfo
+				.createFromFile(new File(new File(System.getenv("HOME")),
+						"handleservletconfig.xml"));
+		this.hsAdapter = HSAdapterFactory.newInstance(
+				authInfo.getAdminHandle(), authInfo.getKeyIndex(),
+				authInfo.getPrivateKey(), authInfo.getCipher());
 		this.rootHTMLRetriever = new RootHTMLRetriever(this.freemarkerConfig);
-		this.rootJSONRetriever = new RootJSONRetriever();
+		this.rootJSONRetriever = new RootJSONRetriever(this.hsAdapter);
 	}
 
 	@Override
@@ -58,17 +74,15 @@ public class HandleRootServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
-		logger.debug("GET");
-		if ((req.getHeader("Accept").indexOf("text/html") > 0)
-				|| (req.getHeader("Accept").indexOf("application/xhtml+xml") > 0)) {
+		logger.debug("GET - "+req.getHeader("Accept"));
+		if ((req.getHeader("Accept").indexOf("text/html") >= 0)
+				|| (req.getHeader("Accept").indexOf("application/xhtml+xml") >= 0)) {
 			logger.debug("RESPONSE: HTML");
 			this.rootHTMLRetriever.exec(req, resp);
-		}
-		else if (req.getHeader("Accept").indexOf("application/json") > 0) {
+		} else if (req.getHeader("Accept").indexOf("application/json") >= 0) {
 			logger.debug("RESPONSE: JSON");
 			this.rootJSONRetriever.exec(req, resp);
-		}
-		else {
+		} else {
 			resp.sendError(HttpServletResponse.SC_NOT_ACCEPTABLE);
 		}
 	}

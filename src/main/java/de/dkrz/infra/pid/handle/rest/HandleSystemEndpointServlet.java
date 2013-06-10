@@ -26,58 +26,10 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 
+import de.dkrz.infra.pid.handle.rest.core.HandleAuthorizationInfo;
+import de.dkrz.infra.pid.handle.rest.core.HandleReference;
+
 public class HandleSystemEndpointServlet extends HttpServlet {
-
-	/**
-	 * Reference to a Handle or moer specifically, to one or more of its index
-	 * values.
-	 * 
-	 * @author tobiasweigel
-	 * 
-	 */
-	protected final static class HandleReference {
-
-		protected final String handle;
-		protected int[] indexes;
-
-		public HandleReference(String handle, int[] indexes) {
-			this.handle = handle;
-			if (indexes == null) {
-				this.indexes = new int[0];
-			} else
-				this.indexes = indexes;
-		}
-
-		public String getHandle() {
-			return handle;
-		}
-
-		public int[] getIndexes() {
-			return indexes;
-		}
-
-		public int numIndexes() {
-			return indexes.length;
-		}
-
-		public void setIndexes(int[] indexes) {
-			if (indexes == null)
-				throw new IllegalArgumentException(
-						"'indexes' parameter must not be null!");
-			this.indexes = indexes;
-		}
-
-		@Override
-		public String toString() {
-			if (this.indexes.length == 0)
-				return this.handle;
-			else if (this.indexes.length == 1)
-				return this.indexes[0] + ":" + this.handle;
-			else {
-				return "[...]:" + this.handle;
-			}
-		}
-	}
 
 	private static final int DEFAULT_ADMIN_VALUE_INDEX = 100;
 
