@@ -16,8 +16,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 
 import de.dkrz.infra.pid.handle.rest.core.HandleReference;
 
-import freemarker.template.TemplateException;
-
 /**
  * Manages all GETs for JSON content.
  * 

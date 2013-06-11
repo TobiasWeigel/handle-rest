@@ -1,5 +1,10 @@
 package de.dkrz.infra.pid.handle.rest.core;
 
+import java.util.Collection;
+import java.util.Vector;
+
+import net.handle.hdllib.HandleValue;
+
 /**
  * Reference to a Handle or moer specifically, to one or more of its index
  * values.
@@ -9,8 +14,9 @@ package de.dkrz.infra.pid.handle.rest.core;
  */
 public class HandleReference {
 
-	protected final String handle;
+	protected String handle;
 	protected int[] indexes;
+	protected Vector<HandleValue> values = new Vector<HandleValue>();
 
 	public HandleReference(String handle, int[] indexes) {
 		this.handle = handle;
@@ -18,6 +24,11 @@ public class HandleReference {
 			this.indexes = new int[0];
 		} else
 			this.indexes = indexes;
+	}
+	
+	public HandleReference(String handle) {
+		this.handle = handle;
+		this.indexes = new int[0];
 	}
 
 	/**
@@ -63,10 +74,14 @@ public class HandleReference {
 		return new HandleReference(pathsegment, indexes);
 	}
 
+	public void setHandle(String handle) {
+		this.handle = handle;
+	}
+	
 	public String getHandle() {
 		return handle;
 	}
-
+	
 	public int[] getIndexes() {
 		return indexes;
 	}
@@ -92,4 +107,25 @@ public class HandleReference {
 			return "[...]:" + this.handle;
 		}
 	}
+	
+	public boolean isPrefixOnly() {
+		return !handle.contains("/");
+	}
+	
+	public String getPrefix() {
+		return handle.substring(0, handle.indexOf("/"));
+	}
+	
+	public void addValues(Collection<HandleValue> v) {
+		values.addAll(v);
+	}
+
+	public Vector<HandleValue> getValues() {
+		return values;
+	}
+
+	public boolean hasProperName() {
+		return handle.contains("/");
+	}
+	
 }
