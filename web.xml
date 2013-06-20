@@ -7,23 +7,28 @@
  
 <web-app>
 
-    <!-- Application servlets -->
- 
     <servlet>
-        <servlet-name>HandleRootServlet</servlet-name>
-        <servlet-class>de.dkrz.infra.pid.handle.rest.HandleRootServlet</servlet-class>
+        <servlet-name>Handle REST Service</servlet-name>
+        <servlet-class>
+            com.sun.jersey.spi.container.servlet.ServletContainer
+        </servlet-class>
+        <init-param>
+            <param-name>com.sun.jersey.config.property.packages</param-name>
+            <param-value>de.dkrz.infra.pid.handle.rest.resources</param-value>
+        </init-param>
+        <init-param>
+            <param-name>com.sun.jersey.api.json.POJOMappingFeature</param-name>
+            <param-value>true</param-value>
+        </init-param>
+        <load-on-startup>1</load-on-startup>
     </servlet>
     
-    <servlet>
-        <servlet-name>IndividualHandleServlet</servlet-name>
-        <servlet-class>de.dkrz.infra.pid.handle.rest.IndividualHandleServlet</servlet-class>
-    </servlet>
- 
     <servlet-mapping>
-        <servlet-name>HandleRootServlet</servlet-name>
+        <servlet-name>Handle REST Service</servlet-name>
         <url-pattern>/*</url-pattern>
-    </servlet-mapping>
-     
+    </servlet-mapping> 
+
+<!-- 
     <security-constraint>
         <web-resource-collection>
             <web-resource-name>Authentication always required</web-resource-name>
@@ -38,14 +43,13 @@
         </auth-constraint>
 
         <user-data-constraint>
-            <!-- transport-guarantee can be CONFIDENTIAL, INTEGRAL, or NONE -->
-            <transport-guarantee>NONE</transport-guarantee>
+             <transport-guarantee>NONE</transport-guarantee>
         </user-data-constraint>
     </security-constraint>
 
     <login-config>
         <auth-method>BASIC</auth-method>
-    </login-config>
+    </login-config> -->
     
     
 </web-app>

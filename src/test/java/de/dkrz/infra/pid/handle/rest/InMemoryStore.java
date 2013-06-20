@@ -1,5 +1,6 @@
 package de.dkrz.infra.pid.handle.rest;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -7,6 +8,7 @@ import java.util.Map;
 import net.handle.api.HSAdapter;
 import net.handle.hdllib.HandleException;
 import net.handle.hdllib.HandleValue;
+import net.handle.hdllib.ValueReference;
 
 /**
  * Implementation of the Handle API main interface with Java data structures for
@@ -19,7 +21,6 @@ public class InMemoryStore implements HSAdapter {
 
 	private Map<String, Map<Integer, HandleValue>> storage = new HashMap<String, Map<Integer, HandleValue>>();
 
-	@Override
 	public void addHandleValues(String handle, HandleValue[] values)
 			throws HandleException {
 		if (!storage.containsKey(handle))
@@ -28,20 +29,21 @@ public class InMemoryStore implements HSAdapter {
 		for (HandleValue hv : values) {
 			if (storage.get(handle).containsKey(hv.getIndex()))
 				throw new HandleException(HandleException.INVALID_VALUE);
-			storage.get(handle).put(hv.getIndex(), hv.duplicate());
+			storage.get(handle).put(hv.getIndex(), duplicateAndFix(hv));
 		}
 	}
 
-	@Override
 	public HandleValue createAdminValue(String adminHandle, int keyIndex,
 			int index) throws HandleException {
 		// somewhat quick and dirty - the proper data would be different, but we
 		// don't have to care here for testing...
+		ValueReference[] refs = new ValueReference[0];
+		Date d = new Date();
+		int timestamp = (int) d.getTime() / 1000;
 		return new HandleValue(keyIndex, "HS_ADMIN".getBytes(),
-				adminHandle.getBytes());
+				adminHandle.getBytes(), (byte) 0, 86400, timestamp, refs, true, true, true, false);
 	}
 
-	@Override
 	public void createHandle(String handle, HandleValue[] values)
 			throws HandleException {
 		if (storage.containsKey(handle)) 
@@ -53,20 +55,20 @@ public class InMemoryStore implements HSAdapter {
 		storage.put(handle, handlerecord);
 	}
 
-	@Override
 	public HandleValue createHandleValue(int index, String type, String data)
 			throws HandleException {
-		return new HandleValue(index, type.getBytes(), data.getBytes());
+		ValueReference[] refs = new ValueReference[0];
+		Date d = new Date();
+		int timestamp = (int) d.getTime() / 1000;
+		return new HandleValue(index, type.getBytes(), data.getBytes(), (byte) 0, 86400, timestamp, refs, true, true, true, false);
 	}
 
-	@Override
 	public void deleteHandle(String handle) throws HandleException {
 		if (!storage.containsKey(handle))
 			throw new HandleException(HandleException.HANDLE_DOES_NOT_EXIST);
 		storage.remove(handle);
 	}
 
-	@Override
 	public void deleteHandleValues(String handle, HandleValue[] values)
 			throws HandleException {
 		if (!storage.containsKey(handle))
@@ -77,7 +79,6 @@ public class InMemoryStore implements HSAdapter {
 		}
 	}
 
-	@Override
 	public HandleValue[] resolveHandle(String handle, String[] types,
 			int[] indexes) throws HandleException {
 		if (!storage.containsKey(handle)) 
@@ -104,30 +105,36 @@ public class InMemoryStore implements HSAdapter {
 		return result;
 	}
 
-	@Override
 	public void setTcpTimeout(int newTcpTimeout) {
 		return;
 	}
 
-	@Override
 	public int getTcpTimeout() {
 		return 0;
 	}
 
-	@Override
 	public void setUseUDP(boolean useUDP) {
 		return;
 	}
 
-	@Override
 	public void updateHandleValues(String handle, HandleValue[] values)
 			throws HandleException {
 		if (!storage.containsKey(handle))
 			throw new HandleException(HandleException.HANDLE_DOES_NOT_EXIST);
 		// create safe copy of given values
 		for (HandleValue hv : values) {
-			storage.get(handle).put(hv.getIndex(), hv.duplicate());
+			HandleValue hvDuplicate = duplicateAndFix(hv);
+			storage.get(handle).put(hv.getIndex(), hvDuplicate);
 		}
+	}
+	
+	private static HandleValue duplicateAndFix(HandleValue hv) {
+		HandleValue hvDuplicate = hv.duplicate();
+		if (hvDuplicate.getReferences() == null) {
+			ValueReference[] refs = new ValueReference[0];
+			hvDuplicate.setReferences(refs);
+		}
+		return hvDuplicate;
 	}
 
 }

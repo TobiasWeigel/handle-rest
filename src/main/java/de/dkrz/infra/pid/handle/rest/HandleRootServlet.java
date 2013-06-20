@@ -27,6 +27,7 @@ import com.fasterxml.jackson.core.JsonToken;
 
 import de.dkrz.infra.pid.handle.rest.core.HandleAuthorizationInfo;
 import de.dkrz.infra.pid.handle.rest.core.HandleReference;
+import de.dkrz.infra.pid.handle.rest.core.HandleValueWrapper;
 import de.dkrz.infra.pid.handle.rest.core.IdentifierNameGenerator;
 import de.dkrz.infra.pid.handle.rest.core.IdentifierNameGeneratorFactory;
 import freemarker.template.Configuration;
@@ -129,7 +130,7 @@ public class HandleRootServlet extends HttpServlet {
 	 */
 	private void createSingleHandle(HttpServletRequest req,
 			HttpServletResponse resp, HandleReference handleref) throws IOException {
-		Vector<HandleValue> hvNew = handleref.getValues();
+		Vector<HandleValueWrapper> hvNew = handleref.getValues();
 		try {
 			HandleValue hvAdmin = hsAdapter.createAdminValue(
 					this.authInfo.getAdminHandle(),
@@ -153,15 +154,15 @@ public class HandleRootServlet extends HttpServlet {
 				}
 				// create handle with new values
 				boolean hvNewContainsAdminValue = false;
-				for (HandleValue hv : hvNew) {
-					if (hv.getTypeAsString().equals("HS_ADMIN")) {
+				for (HandleValueWrapper hv : hvNew) {
+					if (hv.getType().equals("HS_ADMIN")) {
 						hvNewContainsAdminValue = true;
 						break;
 					}
 				}
 				if (!hvNewContainsAdminValue) {
 					// add admin handle value if none present in new values yet
-					hvNew.add(hvAdmin);
+					hvNew.add(new HandleValueWrapper(hvAdmin));
 				}
 				// transform hvNew to array
 				HandleValue[] handlevalues = new HandleValue[hvNew.size()];
