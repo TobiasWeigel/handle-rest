@@ -15,7 +15,7 @@ import net.handle.api.HSAdapter;
 import net.handle.hdllib.HandleException;
 import net.handle.hdllib.HandleValue;
 
-import de.dkrz.infra.pid.handle.rest.ApplicationContext;
+import de.dkrz.infra.pid.handle.rest.core.ApplicationContext;
 import de.dkrz.infra.pid.handle.rest.core.HandleReference;
 import de.dkrz.infra.pid.handle.rest.core.HandleValueWrapper;
 

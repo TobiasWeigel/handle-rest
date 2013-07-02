@@ -33,7 +33,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 
-import de.dkrz.infra.pid.handle.rest.ApplicationContext;
+import de.dkrz.infra.pid.handle.rest.core.ApplicationContext;
 import de.dkrz.infra.pid.handle.rest.core.HandleAuthorizationInfo;
 import de.dkrz.infra.pid.handle.rest.core.HandleReference;
 import de.dkrz.infra.pid.handle.rest.core.HandleValueWrapper;

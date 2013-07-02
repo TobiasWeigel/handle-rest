@@ -4,7 +4,6 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
-import de.dkrz.infra.pid.handle.rest.ApplicationContext;
 
 import net.handle.hdllib.HandleValue;
 import net.handle.hdllib.Util;

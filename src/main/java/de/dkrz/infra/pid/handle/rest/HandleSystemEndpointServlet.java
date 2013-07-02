@@ -28,6 +28,14 @@ import com.fasterxml.jackson.core.JsonToken;
 import de.dkrz.infra.pid.handle.rest.core.HandleAuthorizationInfo;
 import de.dkrz.infra.pid.handle.rest.core.HandleReference;
 
+/**
+ * THIS CLASS IS OBSOLETE. Current task is to tear it apart and integrate the
+ * various pieces in a proper JAX-RS implementation.
+ * 
+ * @author tobiasweigel
+ * 
+ */
+
 public class HandleSystemEndpointServlet extends HttpServlet {
 
 	private static final int DEFAULT_ADMIN_VALUE_INDEX = 100;
@@ -52,16 +60,17 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		this.authInfo = authInfo;
 		this.jsonFactory = new JsonFactory();
 	}
-	
+
 	/**
-	 * Constructor that will load the Handle Authoroization configuration from
-	 * a file "handleservletconfig.xml" in the current user's home directory.
+	 * Constructor that will load the Handle Authoroization configuration from a
+	 * file "handleservletconfig.xml" in the current user's home directory.
 	 * 
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	public HandleSystemEndpointServlet() throws Exception {
 		BasicConfigurator.configure();
-		File configFile = new File(new File(System.getenv("HOME")), "handleservletconfig.xml");
+		File configFile = new File(new File(System.getenv("HOME")),
+				"handleservletconfig.xml");
 		this.authInfo = HandleAuthorizationInfo.createFromFile(configFile);
 		this.hsAdapter = HSAdapterFactory.newInstance(
 				authInfo.getAdminHandle(), authInfo.getKeyIndex(),
@@ -138,7 +147,9 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 			handleref = determineHandleReference(req);
 		} catch (IllegalArgumentException exc) {
 			resp.sendError(400, exc.getMessage());
-			logger.error("Could not determine Handle reference due to an Exception.", exc);
+			logger.error(
+					"Could not determine Handle reference due to an Exception.",
+					exc);
 			return;
 		}
 		try {
@@ -163,7 +174,7 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		} catch (HandleException exc) {
 			resp.sendError(404, "Unknown Handle: " + exc.getLocalizedMessage()
 					+ " [" + exc.getCode() + "]");
-			logger.error("Unknown Handle: "+handleref.getHandle(), exc);
+			logger.error("Unknown Handle: " + handleref.getHandle(), exc);
 			return;
 		} catch (Exception exc) {
 			resp.sendError(500,
@@ -369,8 +380,11 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 				hsAdapter.addHandleValues(handleref.getHandle(), handlevalues);
 			}
 		} catch (JsonParseException exc) {
-			resp.sendError(400, "Malformed JSON data in request content: " + exc.getMessage());
-			logger.error("Could not perform PUT operation due to malformed JSON data: ", exc);
+			resp.sendError(400, "Malformed JSON data in request content: "
+					+ exc.getMessage());
+			logger.error(
+					"Could not perform PUT operation due to malformed JSON data: ",
+					exc);
 			return;
 		} catch (Exception exc) {
 			resp.sendError(500,
@@ -507,8 +521,11 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 				hsAdapter.deleteHandleValues(handleref.getHandle(), arr);
 			}
 		} catch (JsonParseException exc) {
-			resp.sendError(400, "Malformed JSON data in request content: " + exc.getMessage());
-			logger.error("Could not perform POST operation due to malformed JSON data.", exc);
+			resp.sendError(400, "Malformed JSON data in request content: "
+					+ exc.getMessage());
+			logger.error(
+					"Could not perform POST operation due to malformed JSON data.",
+					exc);
 			return;
 		} catch (Exception exc) {
 			resp.sendError(500,

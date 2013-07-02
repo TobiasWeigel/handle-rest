@@ -4,6 +4,7 @@ import net.handle.api.HSAdapter;
 
 import org.junit.Before;
 
+import de.dkrz.infra.pid.handle.rest.core.ApplicationContext;
 import de.dkrz.infra.pid.handle.rest.core.HandleAuthorizationInfo;
 
 public class InMemoryTest extends CommonTest {

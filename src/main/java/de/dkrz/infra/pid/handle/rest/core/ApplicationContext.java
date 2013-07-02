@@ -1,4 +1,4 @@
-package de.dkrz.infra.pid.handle.rest;
+package de.dkrz.infra.pid.handle.rest.core;
 
 import java.io.File;
 import java.io.IOException;
@@ -8,9 +8,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.log4j.Logger;
 import org.xml.sax.SAXException;
 
-import de.dkrz.infra.pid.handle.rest.core.HandleAuthorizationInfo;
-import de.dkrz.infra.pid.handle.rest.core.IdentifierNameGenerator;
-import de.dkrz.infra.pid.handle.rest.core.UUIDGenerator;
 import net.handle.api.HSAdapter;
 import net.handle.api.HSAdapterFactory;
 

@@ -16,6 +16,7 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.test.framework.JerseyTest;
 
+import de.dkrz.infra.pid.handle.rest.core.ApplicationContext;
 import de.dkrz.infra.pid.handle.rest.core.HandleReference;
 
 public class CommonTest extends JerseyTest {
