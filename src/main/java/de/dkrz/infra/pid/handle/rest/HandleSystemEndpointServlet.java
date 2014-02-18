@@ -212,7 +212,11 @@ public class HandleSystemEndpointServlet extends HttpServlet {
 		} catch (HandleException exc) {
 			resp.sendError(404, "Unknown Handle: " + exc.getLocalizedMessage()
 					+ " [" + exc.getCode() + "]");
-			logger.error("Unknown Handle: "+handleref.getHandle(), exc);
+			if (exc.getCode() == HandleException.HANDLE_DOES_NOT_EXIST) {
+				logger.debug("Unknown Handle: "+handleref.getHandle());
+			} else {
+				logger.error("Handle error:" +handleref.getHandle(), exc);
+			}
 			return;
 		} catch (Exception exc) {
 			resp.sendError(500,
